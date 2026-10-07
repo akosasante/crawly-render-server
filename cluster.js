@@ -30,6 +30,7 @@ const launchOptions = {
         '--deterministic-fetch',
         '--disable-features=IsolateOrigins',
         '--disable-site-isolation-trials',
+        '--protocol-timeout=1130000',
         // '--single-process',
 
     ],
@@ -39,9 +40,13 @@ if (process.env.CHROME_EXECUTABLE_PATH) {
 };
 
 let max_concurrency = 2;
+let puppeteer_timeout = 30000;
 if (process.env.MAX_CONCURRENCY) {
     max_concurrency = parseInt(process.env.MAX_CONCURRENCY, 10);
   };
+if (process.env.PUPPETEER_TIMEOUT) {
+    puppeteer_timeout = parseInt(process.env.PUPPETEER_TIMEOUT, 10);
+};
 
 (async () => {
     // Create a cluster with N workers
@@ -49,21 +54,28 @@ if (process.env.MAX_CONCURRENCY) {
         concurrency: Cluster.CONCURRENCY_CONTEXT,
         maxConcurrency: max_concurrency,
         puppeteerOptions: launchOptions,
+        timeout: puppeteer_timeout,
     });
 
     // Define a task
-    cluster.task(async ({ page, data: {url, headers} }) => {
+    cluster.task(async ({ page, data: {url, headers, waitForSelector} }) => {
         const startTime = Date.now();
         if (headers) {
             for (const [name, value] of Object.entries(headers)) {
                 await page.setExtraHTTPHeaders({ [name]: value });
             }
         }
-        const response = await page.goto(url, {timeout: 60000});
+        console.log(`MAKING CALL TO ${url} AT ${new Date().toISOString()}: ${waitForSelector}`);
+        const response = await page.goto(url, {waitUntil: 'load', timeout: 60000});
         const status_code = response.status()
+        console.log(`RESPONSE FROM ${url} AT ${new Date().toISOString()}=> ${status_code}`);
         // const pageBody = await page.evaluate(() => document.body.innerHTML);
         const finalUrl = page.url();
+        const firstResponse = await page.waitForSelector(waitForSelector, {timeout: 60000, visible: true});
+        console.log("THE FINAL URL: " + finalUrl);
+        console.log("THE FIRST RESPONSE: " + firstResponse);
         const pageBody = await page.content()
+        console.log(`AWAITED CONTENT FROM ${url} AT ${new Date().toISOString()}=>${pageBody.length}`);
         const endTime = Date.now();
         const loadTime = endTime - startTime;
         let url_string = "'" + url + "'"
@@ -77,18 +89,19 @@ if (process.env.MAX_CONCURRENCY) {
 
     // Define a route for receiving URLs via POST requests
     app.post('/render', async (req, res) => {
-        const { url, headers } = req.body;
+        const { url, headers, wait_for_selector: waitForSelector } = req.body;
 
         if (!url) {
             return res.status(400).json({ error: 'URL parameter is required.' });
         }
+        console.log("HANDLING CALL TO: " + url);
 
         try {
-            const result = await cluster.execute({url, headers});
+            const result = await cluster.execute({url, headers, waitForSelector});
             res.status(200).json(result);
         } catch (err) {
             errorCount++;
-            console.debug("[DEBUG] Could not get '" + url + "' Error: " + err)
+            console.error("[DEBUG] Could not get '" + url + "' Error: " + err)
             res.status(500).json({ error: 'An error occurred while processing the URL.' + err });
         }
     });

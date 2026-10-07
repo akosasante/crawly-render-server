@@ -1,8 +1,8 @@
-FROM node:18
+FROM --platform=linux/amd64 node:18-slim
 
 
 # We don't need the standalone Chromium
-ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD true
+ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
 
 # Install Google Chrome Stable and fonts
 # Note: this installs the necessary libs to make the browser work with Puppeteer.
@@ -30,5 +30,9 @@ EXPOSE 3000
 
 # Set environment variables
 ENV CHROME_EXECUTABLE_PATH=/usr/bin/google-chrome
+ENV PUPPETEER_TIMEOUT=10000000
+ENV DUMPIO=1
+#ENV DEBUG=puppeteer:*
+
 # Command to start your application
 CMD ["node", "cluster.js"]
