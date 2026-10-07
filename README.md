@@ -52,7 +52,7 @@ curl -X POST \
 ## Waiting for a selector (fork addition)
 `cluster.js` in this fork accepts a `wait_for_selector` field. After the page loads, the server waits up to 60 seconds for a visible element that matches the CSS selector. It then returns the page content. If the selector does not appear, the request fails with a 500 error.
 
-`cluster.js` sets no default for this field, so send it with every request. Use `body` if you do not need to wait.
+The field defaults to `body`, so requests without it wait only for the page body.
 
 ``` sh
 curl -X POST \

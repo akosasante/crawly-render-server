@@ -89,7 +89,7 @@ if (process.env.PUPPETEER_TIMEOUT) {
 
     // Define a route for receiving URLs via POST requests
     app.post('/render', async (req, res) => {
-        const { url, headers, wait_for_selector: waitForSelector } = req.body;
+        const { url, headers, wait_for_selector: waitForSelector = "body" } = req.body;
 
         if (!url) {
             return res.status(400).json({ error: 'URL parameter is required.' });
