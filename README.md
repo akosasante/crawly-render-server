@@ -49,6 +49,20 @@ curl -X POST \
   }'
 ```
 
+## Waiting for a selector (fork addition)
+`cluster.js` in this fork accepts a `wait_for_selector` field. After the page loads, the server waits up to 60 seconds for a visible element that matches the CSS selector. It then returns the page content. If the selector does not appear, the request fails with a 500 error.
+
+`cluster.js` sets no default for this field, so send it with every request. Use `body` if you do not need to wait.
+
+``` sh
+curl -X POST \
+  http://localhost:3000/render \
+  -H 'Content-Type: application/json' \
+  -d '{"url": "https://example.com", "wait_for_selector": "h1"}'
+```
+
+[BGFinder](https://github.com/akosasante/BoardGameDealsFinder) sends this field from a Crawly middleware.
+
 ## Providing Chore Executable Path
 If you need to provide a custom executable path for Chromium or Chrome, you can set the CHROME_EXECUTABLE_PATH environment variable before starting the server:
 
@@ -75,6 +89,14 @@ The server will be accessible at http://localhost:3000.
 
 ## Configuration
 You can customize the Crawly Render Server by modifying the code in `cluster.js` For example, you can adjust the server port or Puppeteer launch options.
+
+`cluster.js` reads these environment variables:
+
+- `MAX_CONCURRENCY`: number of pages rendered at once. Default 2.
+- `PUPPETEER_TIMEOUT`: task timeout in milliseconds. Default 30000. The Dockerfile sets 10000000.
+- `CHROME_EXECUTABLE_PATH`: path to Chrome or Chromium.
+
+The Dockerfile in this fork builds a `linux/amd64` image on `node:18-slim`. It logs each request, which is verbose.
 
 ## License
 This project is licensed under the MIT License - see the LICENSE file for details.
